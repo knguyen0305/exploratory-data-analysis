@@ -1,0 +1,164 @@
+---
+title: "Exploratory Data Analysis"
+output: html_document
+date: "2026-02-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(ggplot2)
+library(countrycode)
+text.to.num <- function(x){
+  xx = as.character(x)
+  res=rep(0, length(x))
+  for(i in 1:length(x)){
+    if(is.na(xx[i])){
+      res[i]=NA
+      next
+    }
+    if (grepl("M", xx[i], ignore.case = TRUE)) {
+      res[i]=as.numeric(gsub("M", "", xx[i], ignore.case = TRUE)) * 1e6
+    } else if (grepl("k", xx[i], ignore.case = TRUE)) {
+      res[i]=as.numeric(gsub("k", "", xx[i], ignore.case = TRUE)) * 1e3
+    } else {
+      res[i]=as.numeric(xx[i])
+    }
+  }
+  res
+}
+
+df1 <- read.csv("pop.csv")[, c("geo", "X2010")]
+colnames(df1) <- c("country", "population")
+df1$population <- text.to.num(df1$population)
+
+df2 <- read.csv("lex.csv")[, c("geo", "X2010")]
+colnames(df2) <- c("country", "lifeexp")
+df2$lifeexp <- text.to.num(df2$lifeexp)
+
+df3 <- read.csv("mincpcap_cppp.csv")[, c("geo", "X2010")]
+colnames(df3) <- c("country", "income")
+df3$income <- text.to.num(df3$income)
+
+df4 <- read.csv("children_per_woman_total_fertility.csv")[, c("geo", "X2010")]
+colnames(df4) <- c("country", "chdperwoman")
+df4$chdperwoman <- text.to.num(df4$chdperwoman)
+
+df5 <- read.csv("child_mortality_0_5_year_olds_dying_per_1000_born.csv")[, c("geo", "X2010")]
+colnames(df5) <- c("country", "childmort")
+df5$childmort <- text.to.num(df5$childmort)
+
+df6 <- read.csv("co2_pcap_cons.csv")[, c("geo", "X2010")]
+colnames(df6) <- c("country", "co2")
+df6$co2 <- text.to.num(df6$co2)
+
+df7 <- read.csv("gdppercapita_us_inflation_adjusted.csv")[, c("geo", "X2010")]
+colnames(df7) <- c("country", "gdpcapita")
+df7$gdpcapita <- text.to.num(df7$gdpcapita)
+
+df8 <- read.csv("total_health_spending_per_person_us.csv")[, c("geo", "X2010")]
+colnames(df8) <- c("country", "healthspend")
+df8$healthspend <- text.to.num(df8$healthspend)
+
+df9 <- read.csv("population_density_per_square_km.csv")[, c("geo", "X2010")]
+colnames(df9) <- c("country", "popdensity")
+df9$popdensity <- text.to.num(df9$popdensity)
+
+df10 <- read.csv("at_least_basic_water_source_overall_access_percent.csv")[, c("geo", "X2010")]
+colnames(df10) <- c("country", "water")
+df10$water <- text.to.num(df10$water)
+
+df11 <- read.csv("murder_total_deaths.csv")[, c("geo", "X2010")]
+colnames(df11) <- c("country", "murder")
+df11$murder <- text.to.num(df11$murder)
+
+Alldata = Reduce(function(x, y) merge(x=x, y=y, by="country", all=TRUE), 
+                 list(df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11))
+
+df <- na.omit(Alldata)
+
+
+df$country <- toupper(df$country)
+
+df$continent <- countrycode(sourcevar = df$country, 
+                            origin = "iso3c", 
+                            destination = "continent")
+```
+```{r}
+ggplot(data = df, mapping = aes(x = childmort, y = lifeexp)) + 
+  geom_point(color = "blue", alpha = 0.6) +
+  labs(title = "Scatterplot of Relationship between Child Mortality and Life Expectancy",
+       x = "Child Mortality (per 1000 births)", 
+       y = "Life Expectancy (years)") +
+  theme_minimal()
+```
+Question 1: The scatterplot shows a strong negative relationship between child mortality and life expectancy. As child mortality (deaths per 1000 births) decreases, life expectancy increases significantly. For the form, the relationship is relatively linear. But, there is more variation, or vertical sprea, in countries where child mortality is higher. The data is clustered in the top left corner, meaning a large majority of countries have achieved low child mortality and high life expectancy. There is a long tail of points leading towards the bottom right. One important outlier is seen at the bottom right, which represents a country experiencing a major conflict in 2010 that resulted in child mortality being > 200, while life expectancy being around 32 years.
+
+```{r}
+ggplot(data = df, mapping = aes(x = childmort, y = lifeexp, size = population, color = continent)) + 
+  geom_point(alpha = 0.5) + 
+  labs(title = "Scatterplot of Life Expectancy vs. Child Mortality (2010)",
+       subtitle = "Sized by Population, Colored by Continent",
+       x = "Child Mortality (per 1000 births)", 
+       y = "Life Expectancy (years)",
+       color = "Continent",
+       size = "Population") +
+  theme_minimal()
+```
+Question 2: The scatterplot shows a strong negative relationship between child mortality and life expectancy, where countries with lower mortality rates show higher life expectancy. The data is clustered by geography, with European and American countries grouped in the top-left corner showing signs of "high health", followed by the "tail" of African nations extending towards the bottom right. This shows a significant global health gap, showing a major outlier in the bottom-right due to an event. Also, the inclusion of population size reveals that the largest data points representing nations in Asia are mostly seen in the middle to upper range. This suggest that the global health gap isn't just between small nations, but affects billions of people in large countries. In addition, the European cluster in the top left shows that these countries have reached a consensus of high health regardless of population size.
+```{r}
+ggplot(data = df, mapping = aes(x = lifeexp)) + 
+  geom_histogram(fill = "blue", color = "white", bins = 20) +
+  labs(title = "Histogram of Distribution of Global Life Expectancy (2010)", 
+       x = "Life Expectancy (years)", 
+       y = "Number of Countries") +
+  theme_minimal()
+```
+Question 3: The distribution of global life expectancy in 2010 is unimodal and left-skewed, which shows that while most countries have achieved high health standards, a few are behind. The mode, or the most frequent life expectancy, is shown at the peak of the histogram between 70 and 80 years. Because the distribution is negatively skewed, the median remains closer to the main cluster of healthy nations, while the mean is dragged lower towards the left side by the "tail" of countries on the left.
+```{r}
+ggplot(data = df, mapping = aes(y = lifeexp)) + 
+  geom_boxplot(fill = "blue", outlier.color = "red", outlier.shape = 16) +
+  labs(title = "Boxplot of Global Life Expectancy (2010)", 
+       y = "Life Expectancy (years)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+Question 4: The boxplot shows a left-skewed distribution, which is displayed by the long downard whisker and the lonely point at the bottom. This point is an important outlier located at around 32 years, showing a country with a life expectancy far below the global norm in 2010. The box itself represents the middle 50% of the data, with the median line position towards the upper half of the box showing that while most nations are in the high health range of 70-80 years, the overall distribution is influenced by the lower-end values.
+```{r}
+ggplot(data = df, mapping = aes(x = continent, y = lifeexp, fill = continent)) + 
+  geom_boxplot() +
+  labs(title = "Boxplot of Comparison of Life Expectancy by Continent (2010)", 
+       x = "Continent", 
+       y = "Life Expectancy (years)") +
+  theme_minimal() +
+  theme(legend.position = "none") 
+```
+As seen by the side-by-side boxplots, it reveals that life expectancy is not similar among the continents, showing significant global inequality and a clear difference in health outcomes. Europe and Oceania display the highest and most consistent health standards, shown by high medians and compressed boxes that show little variation between the nations. Africa has a lower median life expectancy and a much wider spread, suggesting a larger gap in health within the continent. The standalone points show that the extreme outlier from previous questions belong to the Americas, standing far below its regional median, while Asia also shows internal variation. Because the medians do not align and spreads, the data confrims that geographic location is a primary factor in determining life expectancy.
+```{r}
+ggplot(data = df, mapping = aes(x = continent, fill = continent)) +
+  geom_bar() +
+  labs(title = "Bar Graph of Number of Countries per Continent (2010)", 
+       x = "Continent", 
+       y = "Number of Countries") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+Question 6: The bar graph shows the distribution of countries across the five continents within the dataset. Africa has the largest number of countries, withover 50 countries represented. The continent with the second largest number of countries would be Asia, then followed by Europe. These results are significant as they show that a large portion of the data points showing the lower life expectancy originate from the two regions of Africa and Asia. In contrast, Oceania has the smallest representation with less than 15 countries, which also explains why its spread appears different from the more heavily populated continents.
+```{r}
+df$fertility_type <- ifelse(df$chdperwoman <= 2, "Low (<=2)", "High (>2)")
+
+table(df$fertility_type)
+```
+Question 7: For this question, I created an indicator variable to derive the numerical data regarding the average number of children per woman into two groups. As the question asked, I set the threshold at 2 children per woman to distinguish between countries with low fertility and those with higher fertility. And as a result, there were 117 countries in the dataset where the average numver of children per woman is greater than 2, while there were 66 countries categorized as having a lower fertility rate of 2 or fewer children per woman.
+```{r}
+ggplot(data = df, mapping = aes(x = continent, fill = fertility_type)) +
+  geom_bar(position = "fill") +
+  labs(title = "Proportion of Fertility Levels by Continent (2010)",
+       x = "Continent",
+       y = "Proportion (0 to 1.0)",
+       fill = "Fertility Level") +
+  theme_minimal()
+```
+Question 8: Among the five countries, the percentage of countries with an average of two or fewer children per woman is not similar. Europe leads the continents with the highest percentage of low fertility countries, with the teal section occupying nearly 90% of its bar. Africa has the lowest perecentage, with the vast majority of its countries falling into the high fertility level. In the Americas and Asia, they show a bit more balanced distribution, though both contain high fertility in both regions. Out of all of the datasets, 117 countries are classified as high fertility, while only 66 are low, and this graph clarifies that these low fertility nations are heavily concentrated in Europe.
+
